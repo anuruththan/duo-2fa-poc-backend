@@ -81,6 +81,12 @@
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
             <version>2.3.0</version>
         </dependency>
+        <!-- https://mvnrepository.com/artifact/com.duosecurity/duo-universal-sdk -->
+        <dependency>
+            <groupId>com.duosecurity</groupId>
+            <artifactId>duo-universal-sdk</artifactId>
+            <version>1.2.0</version>
+        </dependency>
         <dependency>
             <groupId>org.testng</groupId>
             <artifactId>testng</artifactId>

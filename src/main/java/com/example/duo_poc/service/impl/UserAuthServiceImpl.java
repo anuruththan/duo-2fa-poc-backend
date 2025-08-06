@@ -11,11 +11,13 @@ import com.example.duo_poc.util.JwtUtil;
 import com.example.duo_poc.util.PasswordUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
 public class UserAuthServiceImpl implements UserAuthService {
+
 
     @Autowired
     private UserAuthDao userAuthDao;
@@ -44,7 +46,7 @@ public class UserAuthServiceImpl implements UserAuthService {
     public GeneralResponse authenticateUser(UserAuthRequestDto userAuthRequestDto) {
         String email = userAuthRequestDto.getEmail();
         String password = userAuthRequestDto.getPassword();
-        log.info("email:{} password:{}", email, password);
+
         GeneralResponse generalResponse = new GeneralResponse();
         UserAuthResponseDto userAuthResponseDto = new UserAuthResponseDto();
 
@@ -76,4 +78,5 @@ public class UserAuthServiceImpl implements UserAuthService {
     public GeneralResponse changePassword(PasswordChangeDto passwordChangeDto) {
         return userAuthDao.changePassword(passwordChangeDto);
     }
+
 }

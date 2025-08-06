@@ -6,7 +6,7 @@ import com.example.duo_poc.dto.request.user.PasswordChangeDto;
 import com.example.duo_poc.dto.response.GeneralResponse;
 import com.example.duo_poc.dto.response.user.UserAuthResponseDto;
 
-public interface UserAuthService {
+public interface  UserAuthService {
 
     public GeneralResponse insertNewUser(InsertUserDto insertUserDto);
 
@@ -15,6 +15,5 @@ public interface UserAuthService {
     public GeneralResponse authenticateUser(UserAuthRequestDto userAuthRequestDto);
 
     public GeneralResponse changePassword(PasswordChangeDto passwordChangeDto);
-
 
 }
