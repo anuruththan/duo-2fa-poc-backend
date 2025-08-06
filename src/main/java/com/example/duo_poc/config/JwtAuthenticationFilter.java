@@ -1,6 +1,6 @@
 package com.example.duo_poc.config;
 
-import org.example.crick_app.util.JwtUtil;
+import com.example.duo_poc.util.JwtUtil;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

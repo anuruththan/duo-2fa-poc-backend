@@ -282,4 +282,4 @@ SELECT FROM insert_user_role('Supper-admin');
 SELECT FROM insert_user_role('Series-manager');
 SELECT FROM insert_user_role('Scorer');
 SELECT FROM insert_user_role('General-User');
-SELECT FROM insert_user_details('Winter', 'Dass', 1, 'winterdass@gmail.com', '0779613315', '11223344');
+SELECT FROM insert_user_details('Anuruththan', 'Baskaran', 1, 'anuruththan1320@gmail.com', '0779613315', '11223344');

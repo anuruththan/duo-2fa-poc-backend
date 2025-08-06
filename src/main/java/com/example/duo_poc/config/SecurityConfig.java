@@ -1,6 +1,6 @@
 package com.example.duo_poc.config;
 
-import org.example.crick_app.config.JwtAuthenticationFilter;
+import com.example.duo_poc.config.JwtAuthenticationFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -25,14 +25,9 @@ public class SecurityConfig {
                                 .requestMatchers(
                                         "/v3/api-docs/**",
                                         "/swagger-ui/**",
-                                        "/swagger-ui.html",
-                                        "/ws/**",
-                                        "/chat/**"
+                                        "/swagger-ui.html"
                                 ).permitAll()
                                 .requestMatchers("/auth/**").permitAll()
-                                .requestMatchers("/supper-admin/**").hasAnyAuthority("1")
-                                .requestMatchers("/series-admin/**").hasAnyAuthority("2")
-                                .requestMatchers("/scorer/**").hasAnyAuthority( "3")
                                 .anyRequest().authenticated()
                 );
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

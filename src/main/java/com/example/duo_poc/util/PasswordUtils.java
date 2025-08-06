@@ -15,7 +15,6 @@ public class PasswordUtils {
             for (byte b : hashed) {
                 sb.append(String.format("%02x", b));
             }
-            log.info("Password is : {}",sb.toString());
             return sb.toString();
         } catch (Exception e) {
             log.error("Error hashing password {}",e.getMessage());
