@@ -47,23 +47,22 @@ public class UserAuthController {
         return generalResponse;
     }
 
-
-
     @RequestMapping(path = "/login", method = RequestMethod.POST)
     public GeneralResponse login(@RequestBody UserAuthRequestDto userAuthRequestDto) throws DuoException {
         GeneralResponse generalResponse = new GeneralResponse();
         generalResponse = userAuthService.authenticateUser(userAuthRequestDto);
-
         if (generalResponse.getRes()) {
             UserAuthResponseDto user = (UserAuthResponseDto) generalResponse.getData();
             String state = UUID.randomUUID().toString();
-            httpSession.setAttribute("duo_state", state);
-            httpSession.setAttribute("duo_user_role_name", user.getUserRoleName());
-            httpSession.setAttribute("duo_email", user.getEmail());
-            httpSession.setAttribute("duo_roleId", user.getRoleId());
-            String duoUrl = duoService.createAuthUrl(user.getUserRoleName(), state);
+            httpSession.setAttribute("state", state);
+            httpSession.setAttribute("user_role_name", user.getUserRoleName());
+            httpSession.setAttribute("email", user.getEmail());
+            httpSession.setAttribute("roleId", user.getRoleId());
+            String duoUrl = duoService.createAuthUrl(user.getEmail(), state);
+
+            generalResponse.setData(Collections.singletonMap("url", duoUrl));
             generalResponse.setMsg("Password OK. Complete Duo 2FA.");
-            generalResponse.setData(Collections.singletonMap("duo_url", duoUrl));
+
         }
         return generalResponse;
     }
@@ -75,10 +74,9 @@ public class UserAuthController {
             @RequestParam("duo_code") String code) {
 
         GeneralResponse generalResponse = new GeneralResponse();
-        String expectedState = (String) httpSession.getAttribute("duo_state");
-        String user_role_name = (String) httpSession.getAttribute("duo_user_role_name");
-        String email = (String) httpSession.getAttribute("duo_email");
-        Integer roleId = (Integer) httpSession.getAttribute("duo_roleId");
+        String expectedState = (String) httpSession.getAttribute("state");
+        String email = (String) httpSession.getAttribute("email");
+        Integer roleId = (Integer) httpSession.getAttribute("roleId");
 
         if (expectedState == null || !expectedState.equals(state)) {
             generalResponse.setMsg("Invalid state. Possible CSRF attack.");
@@ -87,9 +85,14 @@ public class UserAuthController {
         }
 
         try {
-            Token token = duoService.exchangeAuthorizationCode(code, user_role_name);
-            String username = token.getSub(); // Or token.getUser().getName()
-            String displayName = token.getPreferred_username();
+            Token token = duoService.exchangeAuthorizationCode(code, email);
+
+            if (token == null) {
+                generalResponse.setMsg("Error in generating the token.");
+                generalResponse.setStatusCode(401);
+                return generalResponse;
+            }
+
             AuthResult authResult = token.getAuth_result(); // Or token.getAuth_context().getResult()
             if (authResult == null) {
                 generalResponse.setMsg("No AuthResult from Duo response.");
@@ -99,6 +102,7 @@ public class UserAuthController {
 
             String status = authResult.getStatus();
             String result = authResult.getResult();
+
             if ("allow".equalsIgnoreCase(result) || "allow".equalsIgnoreCase(status)) {
                 String jwt = jwtUtil.generateToken(email, roleId);
                 generalResponse.setData(Collections.singletonMap("accessToken", jwt));

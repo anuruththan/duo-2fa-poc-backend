@@ -22,9 +22,6 @@ public class UserAuthServiceImpl implements UserAuthService {
     @Autowired
     private UserAuthDao userAuthDao;
 
-    @Autowired
-    private JwtUtil jwtUtil;
-
     @Override
     public GeneralResponse insertNewUser(InsertUserDto insertUserDto) {
         GeneralResponse generalResponse = new GeneralResponse();
@@ -58,8 +55,6 @@ public class UserAuthServiceImpl implements UserAuthService {
             return generalResponse;
 
         } else if (userAuthResponseDto.getPassword().equals(PasswordUtils.hashSHA256(password))) {
-            String token = jwtUtil.generateToken(userAuthResponseDto.getEmail(), userAuthResponseDto.getRoleId());
-            userAuthResponseDto.setAccessToken(token);
             generalResponse.setData(userAuthResponseDto);
             generalResponse.setMsg("Authenticated");
             generalResponse.setRes(true);
