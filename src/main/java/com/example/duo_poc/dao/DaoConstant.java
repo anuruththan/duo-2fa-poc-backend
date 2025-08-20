@@ -10,4 +10,12 @@ public class DaoConstant {
 
     public final static String CHANGE_PASSWORD = "{CALL change_password( ?, ?, ?)}";
 
+    public final static String VERIFY_USER = "{CALL verify_user(?)}";
+
+    public final static String UNVERIFY_USER = "{CALL unverify_user(?)}";
+
+    public final static String GET_SECRET_KEY = "{CALL get_secret_key(?)}";
+
+    public final static String INSERT_SECRET_KEY = "{CALL insert_secret_key(?, ?)}";
+
 }

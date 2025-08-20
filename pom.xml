@@ -9,10 +9,10 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.example</groupId>
-    <artifactId>duo_poc</artifactId>
+    <artifactId>2FA_POC</artifactId>
     <version>1.0.0</version>
-    <name>duo_poc</name>
-    <description>duo_poc</description>
+    <name>2FA_POC</name>
+    <description>TOTP</description>
     <url/>
     <licenses>
         <license/>
@@ -70,6 +70,12 @@
             <artifactId>jjwt-jackson</artifactId>
             <version>0.11.5</version>
             <scope>runtime</scope>
+        </dependency>
+        <!--Dependency For Totp-->
+        <dependency>
+            <groupId>com.warrenstrange</groupId>
+            <artifactId>googleauth</artifactId>
+            <version>1.4.0</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>

@@ -2,37 +2,48 @@
 CREATE TABLE IF NOT EXISTS "UserRole"
 (
     "UserRoleId"   SERIAL PRIMARY KEY,
-    "UserRoleName" CHARACTER VARYING
+    "UserRoleName" VARCHAR
 );
-
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 --Create User Details Table
 CREATE TABLE IF NOT EXISTS "UserDetails"
 (
-    "UserDetailId"   SERIAL PRIMARY KEY,
-    "FirstName"      CHARACTER VARYING,
-    "LastName"       CHARACTER VARYING,
-    "UserRoleId"     INT               NOT NULL,
-    "E-mail"         CHARACTER VARYING NOT NULL UNIQUE,
-    "MobileNumber"   CHARACTER VARYING NOT NULL,
-    "Password"       CHARACTER VARYING NOT NULL,
+    "UserDetailId"      SERIAL PRIMARY KEY,
+    "FirstName"         VARCHAR,
+    "LastName"          VARCHAR,
+    "UserRoleId"        INT     NOT NULL,
+    "E-mail"            VARCHAR NOT NULL UNIQUE,
+    "MobileNumber"      VARCHAR NOT NULL,
+    "Password"          VARCHAR NOT NULL,
+    "SecretKey"         VARCHAR,
+    "IsUserVerified"    BOOLEAN                     DEFAULT FALSE,
+    "PasswordCreatedOn" TIMESTAMP WITHOUT TIME ZONE DEFAULT now(),
     FOREIGN KEY ("UserRoleId") REFERENCES "UserRole" ("UserRoleId")
-    );
+);
+
+--Create User History
+CREATE TABLE IF NOT EXISTS logging."UserPasswordHistory"
+(
+    "UserChangeHistoryId" SERIAL PRIMARY KEY,
+    "UserDetailId"        INT,
+    "Password"            VARCHAR NOT NULL,
+    "CreatedOn"           TIMESTAMP DEFAULT NOW(),
+    FOREIGN KEY ("UserDetailId") REFERENCES "UserDetails" ("UserDetailId")
+);
 
 --To insert the User Role
 CREATE OR REPLACE FUNCTION insert_user_role(
-    IN pUserRoleName CHARACTER VARYING,
-    OUT "rDataUpdated" CHARACTER VARYING
+    IN pUserRoleName VARCHAR,
+    OUT "rDataUpdated" VARCHAR
 )
-       LANGUAGE plpgsql
+    LANGUAGE plpgsql
 AS
 '
     DECLARE
         lExists BOOLEAN;
     BEGIN
         IF pUserRoleName IS NULL THEN
-             "rDataUpdated" :=''Invalid input: UserRoleName is null'';
+            "rDataUpdated" := ''Invalid input: UserRoleName is null'';
             RETURN;
         END IF;
 
@@ -47,7 +58,7 @@ AS
         END IF;
 
         INSERT
-        INTO "UserRole"("UserRoleName")
+            INTO "UserRole"("UserRoleName")
         VALUES (pUserRoleName);
 
         "rDataUpdated" := ''User Role Successfully Inserted'';
@@ -60,23 +71,81 @@ AS
     END;
 ';
 
+drop FUNCTION IF EXISTS verify_user(pEmail VARCHAR);
+CREATE OR REPLACE FUNCTION verify_user(IN pEmail VARCHAR)
+    RETURNS VOID
+    LANGUAGE plpgsql
+AS
+'
+    BEGIN
+        UPDATE "UserDetails"
+        SET "IsUserVerified" = TRUE
+        WHERE "E-mail" = pEmail;
+    END;
+';
 
+DROP FUNCTION IF EXISTS unverify_user(pEmail VARCHAR);
+CREATE OR REPLACE FUNCTION unverify_user(IN pEmail VARCHAR)
+    RETURNS VOID
+    LANGUAGE plpgsql
+AS
+'
+    BEGIN
+        UPDATE "UserDetails"
+        SET "IsUserVerified" = FALSE
+        WHERE "E-mail" = pEmail;
+    END;
+';
+
+CREATE OR REPLACE FUNCTION insert_secret_key(IN pEmailId VARCHAR, IN pSecretKey VARCHAR)
+    RETURNS VOID
+    LANGUAGE plpgsql
+AS
+'
+    BEGIN
+        UPDATE "UserDetails"
+        SET "SecretKey" = COALESCE(pSecretKey, "SecretKey")
+        WHERE "E-mail" = pEmailId;
+    END;
+';
+
+CREATE OR REPLACE FUNCTION get_secret_key(IN pEmailId VARCHAR, OUT "rSecretKey" VARCHAR)
+    LANGUAGE plpgsql
+AS
+'
+    DECLARE
+        lIsVerified BOOLEAN DEFAULT FALSE;
+    BEGIN
+        SELECT "UserDetails"."IsUserVerified"
+        INTO lIsVerified
+        FROM "UserDetails"
+        WHERE "E-mail" = pEmailId;
+        IF lIsVerified THEN
+            SELECT "SecretKey"
+            INTO "rSecretKey"
+            FROM "UserDetails"
+            WHERE "E-mail" = pEmailId;
+            RETURN;
+        END IF;
+    END;
+';
 
 --Insert UserDetails
 CREATE OR REPLACE FUNCTION insert_user_details(
-    IN pFirstName CHARACTER VARYING,
-    IN pLastName CHARACTER VARYING,
+    IN pFirstName VARCHAR,
+    IN pLastName VARCHAR,
     IN pUserRoleId INT,
-    IN pEmail CHARACTER VARYING,
-    IN pMobileNumber CHARACTER VARYING,
-    IN pPassword CHARACTER VARYING,
-    OUT "rDataUpdated" CHARACTER VARYING
+    IN pEmail VARCHAR,
+    IN pMobileNumber VARCHAR,
+    IN pPassword VARCHAR,
+    OUT "rDataUpdated" VARCHAR
 )
-         LANGUAGE plpgsql
+    LANGUAGE plpgsql
 AS
 '
     DECLARE
         lExists BOOLEAN;
+        lUserId INT;
     BEGIN
         IF pFirstName IS NULL OR pUserRoleId IS NULL OR pEmail IS NULL THEN
             "rDataUpdated" := ''Invalid input: Required fields are missing'';
@@ -95,43 +164,46 @@ AS
 
         INSERT INTO "UserDetails"("FirstName", "LastName", "UserRoleId", "E-mail", "MobileNumber",
                                   "Password")
-        VALUES (pFirstName, pLastName, pUserRoleId, pEmail, pMobileNumber,
-                ENCODE(DIGEST(pPassword, ''sha256''), ''hex''));
+        VALUES (pFirstName, pLastName, pUserRoleId, pEmail, pMobileNumber, pPassword);
+
+        SELECT "UserDetailId"
+        into lUserId
+        FROM "UserDetails"
+        WHERE "E-mail" = pEmail;
+        INSERT INTO logging."UserPasswordHistory"("UserDetailId", "Password")
+        VALUES (lUserId, pPassword);
 
         "rDataUpdated" := ''User Details Successfully Inserted'';
-            RETURN;
+        RETURN;
 
-       EXCEPTION
+    EXCEPTION
         WHEN OTHERS THEN
             "rDataUpdated" := ''Issue In Inserting The User Details'';
             RETURN;
-
     END;
 ';
 
-
-
 --Update User Details
 CREATE OR REPLACE FUNCTION update_user_details(
-    IN pEmail CHARACTER VARYING DEFAULT NULL,
-    IN pMobileNumber CHARACTER VARYING DEFAULT NULL,
-    IN pFirstName CHARACTER VARYING DEFAULT NULL,
-    IN pLastName CHARACTER VARYING DEFAULT NULL,
+    IN pEmail VARCHAR DEFAULT NULL,
+    IN pMobileNumber VARCHAR DEFAULT NULL,
+    IN pFirstName VARCHAR DEFAULT NULL,
+    IN pLastName VARCHAR DEFAULT NULL,
     IN pUserRoleId INT DEFAULT NULL,
     IN pLocationId INT DEFAULT NULL,
-    IN pPassword CHARACTER VARYING DEFAULT NULL,
-    OUT "rDataUpdated" CHARACTER VARYING
+    IN pPassword VARCHAR DEFAULT NULL,
+    OUT "rDataUpdated" VARCHAR
 )
-            LANGUAGE plpgsql
+    LANGUAGE plpgsql
 AS
 '
     DECLARE
-        lUserId INT;
+        lUserId     INT;
         lUserRoleId INT;
     BEGIN
         -- Validate at least one identifier
         IF (pEmail IS NULL OR TRIM(pEmail) = '''') AND (pMobileNumber IS NULL OR TRIM(pMobileNumber) = '''') THEN
-             "rDataUpdated" := ''At least one of Email or MobileNumber must be provided'';
+            "rDataUpdated" := ''At least one of Email or MobileNumber must be provided'';
             RETURN;
         END IF;
 
@@ -143,13 +215,13 @@ AS
         LIMIT 1;
 
         IF lUserId IS NULL THEN
-             "rDataUpdated" := ''User not found with given Email or Mobile Number'';
+            "rDataUpdated" := ''User not found with given Email or Mobile Number'';
             RETURN;
         END IF;
 
 
         -- Get current user role ID
-       SELECT "UserRoleId"
+        SELECT "UserRoleId"
         INTO lUserRoleId
         FROM "UserDetails"
         WHERE "UserDetailId" = lUserId;
@@ -162,8 +234,8 @@ AS
 
         -- Prevent updating to restricted roles
 
-       IF pUserRoleId = 1 THEN
-             "rDataUpdated" := ''Cannot update user role to Supper admin'';
+        IF pUserRoleId = 1 THEN
+            "rDataUpdated" := ''Cannot update user role to Supper admin'';
             RETURN;
         END IF;
 
@@ -173,17 +245,16 @@ AS
 
         -- Perform update only for non-null fields
         UPDATE "UserDetails"
-        SET "FirstName"      = COALESCE(pFirstName, "FirstName"),
-            "LastName"       = COALESCE(pLastName, "LastName"),
-            "UserRoleId"     = COALESCE(pUserRoleId, "UserRoleId"),
-            "E-mail"         = COALESCE(pemail, "E-mail"),
-            "MobileNumber"   = COALESCE(pmobilenumber, "MobileNumber"),
-            "UserLocationId" =COALESCE(pLocationId, "UserLocationId"),
-            "Password"       =COALESCE(ENCODE(DIGEST(pPassword, ''sha256''), ''hex''), "Password")
+        SET "FirstName"    = COALESCE(pFirstName, "FirstName"),
+            "LastName"     = COALESCE(pLastName, "LastName"),
+            "UserRoleId"   = COALESCE(pUserRoleId, "UserRoleId"),
+            "E-mail"       = COALESCE(pemail, "E-mail"),
+            "MobileNumber" = COALESCE(pmobilenumber, "MobileNumber"),
+            "Password"     =COALESCE(pPassword, "Password")
         WHERE "UserDetailId" = lUserId;
 
         "rDataUpdated" := ''User Details Successfully Updated'';
-            RETURN;
+        RETURN;
 
     EXCEPTION
         WHEN OTHERS THEN
@@ -195,17 +266,17 @@ AS
 
 -- GET User details by email id
 CREATE OR REPLACE FUNCTION get_user_details_by_email_id(
-    pEmailID CHARACTER VARYING
+    pEmailID VARCHAR
 )
     RETURNS TABLE
             (
-                lUserId      INT,
-                lFullName     CHARACTER VARYING,
-                lMobileNumber CHARACTER VARYING,
-                lUserRole     CHARACTER VARYING,
+                lUserId       INT,
+                lFullName     VARCHAR,
+                lMobileNumber VARCHAR,
+                lUserRole     VARCHAR,
                 lUserRoleId   INT,
-                lpassword CHARACTER VARYING,
-                lemail CHARACTER VARYING
+                lpassword     VARCHAR,
+                lemail        VARCHAR
             )
     LANGUAGE plpgsql
 AS
@@ -213,11 +284,12 @@ AS
     BEGIN
         RETURN QUERY
             SELECT ud."UserDetailId",
-                   (ud."FirstName" || '' '' || ud."LastName")::CHARACTER VARYING AS lFullName,
+                   (ud."FirstName" || '' '' || ud."LastName")::VARCHAR AS lFullName,
                    ud."MobileNumber",
                    ur."UserRoleName",
                    ud."UserRoleId"::INT,
-                   ud."Password", ud."E-mail"
+                   ud."Password",
+                   ud."E-mail"
             FROM "UserDetails" ud
                      LEFT JOIN "UserRole" ur ON ur."UserRoleId" = ud."UserRoleId"
             WHERE ud."E-mail" like pEmailID || ''%'';
@@ -232,54 +304,84 @@ AS
 
 -- Change Password
 CREATE OR REPLACE FUNCTION change_password(
-    pUserEmail CHARACTER VARYING DEFAULT NOT NULL,
-    pOldPassword CHARACTER VARYING DEFAULT NOT NULL,
-    pNewPassword CHARACTER VARYING DEFAULT NOT NULL
+    pUserEmail VARCHAR,
+    pOldPassword VARCHAR,
+    pNewPassword VARCHAR
 )
     RETURNS TABLE
             (
-                "rPasswordHaveChanged" CHARACTER VARYING
+                "rPasswordHaveChanged" VARCHAR
             )
     LANGUAGE plpgsql
 AS
 '
     DECLARE
-        Email    CHARACTER VARYING := null;
-        Password CHARACTER VARYING := null;
+        lUserEmail        VARCHAR := null;
+        lUserPassword     VARCHAR := null;
+        lUserDetailId     INT     := NULL;
+        lHistoryPasswords VARCHAR[];
     BEGIN
 
         SELECT lpassword,
-               lemail
-        into Password, Email
-        FROM get_user_details_by_email_id(pUserEmail);
+               lemail,
+               lUserId
+        INTO lUserPassword, lUserEmail, lUserDetailId
+        FROM get_user_details_by_email_id(puseremail);
 
-        IF Email != puseremail OR Email IS NULL THEN
+        SELECT ARRAY(SELECT "Password"
+                     FROM logging."UserPasswordHistory"
+                     WHERE "UserDetailId" = lUserDetailId)
+        INTO lHistoryPasswords;
+
+        IF lUserEmail != puseremail OR lUserEmail IS NULL THEN
             RAISE EXCEPTION ''Invalid Email-ID'';
         END IF;
-
-        IF Password = ENCODE(DIGEST(pNewPassword, ''sha256''), ''hex'') THEN
+        IF lUserPassword = pnewpassword THEN
             RAISE EXCEPTION ''Old password and New password are same.'';
         END IF;
-
-        IF Password != ENCODE(DIGEST(pOldPassword, ''sha256''), ''hex'') THEN
+        IF lUserPassword != poldpassword THEN
             RAISE EXCEPTION ''Current password is Miss matching.'';
         END IF;
 
-        UPDATE "UserDetails"
-        SET "Password"=ENCODE(DIGEST(pNewPassword, ''sha256''), ''hex'')
-        WHERE "E-mail" = pUserEmail;
+        IF pnewpassword = ANY (lHistoryPasswords) THEN
+            RAISE EXCEPTION ''Can not use last 5 password.'';
+        ELSE
+            -- Update password
+            UPDATE "UserDetails"
+            SET "Password"= pnewpassword,
+                "PasswordCreatedOn" = Now()
+            WHERE "E-mail" = puseremail;
 
-        "rPasswordHaveChanged" := ''Password has been updated'';
+            INSERT INTO logging."UserPasswordHistory" ("UserDetailId", "Password")
+            VALUES (lUserDetailId, pnewpassword);
 
-        RETURN QUERY SELECT "rPasswordHaveChanged";
+            -- Delete old passwords, keep last 5
+            WITH delete_history AS (SELECT "UserChangeHistoryId"
+                                    FROM (SELECT "UserChangeHistoryId",
+                                                 ROW_NUMBER() OVER (
+                                                     PARTITION BY "UserDetailId"
+                                                     ORDER BY "CreatedOn" DESC
+                                                     ) AS rn
+                                          FROM logging."UserPasswordHistory") deleting_change_history
+                                    WHERE deleting_change_history.rn > 5)
+            DELETE
+            FROM logging."UserPasswordHistory"
+            WHERE "UserChangeHistoryId" in (SELECT "UserChangeHistoryId"
+                                            FROM delete_history);
 
+            "rPasswordHaveChanged" := ''Password has been updated'';
+            RETURN QUERY SELECT "rPasswordHaveChanged";
+        END IF;
     END;
 ';
 
 
 -- CREATE IMPORTANT ROLES AND SUPPER USER FOR ACCESSING THE APPLICATION
-SELECT FROM insert_user_role('Supper-admin');
-SELECT FROM insert_user_role('Series-manager');
-SELECT FROM insert_user_role('Scorer');
-SELECT FROM insert_user_role('General-User');
-SELECT FROM insert_user_details('Anuruththan', 'Baskaran', 1, 'anuruththan1320@gmail.com', '0779613315', '11223344');
+SELECT
+FROM insert_user_role('Price');
+SELECT
+FROM insert_user_role('Soap');
+SELECT
+FROM insert_user_role('Ghost');
+SELECT
+FROM insert_user_role('');

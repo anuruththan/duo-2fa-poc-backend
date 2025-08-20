@@ -1,11 +1,13 @@
 package com.example.duo_poc.util;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 
 import java.security.MessageDigest;
 
 
 @Slf4j
+@Component
 public class PasswordUtils {
     public static String hashSHA256(String password) {
         try {

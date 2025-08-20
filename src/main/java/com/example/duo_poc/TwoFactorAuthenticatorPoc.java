@@ -4,10 +4,10 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class DuoPocApplication {
+public class TwoFactorAuthenticatorPoc {
 
     public static void main(String[] args) {
-        SpringApplication.run(DuoPocApplication.class, args);
+        SpringApplication.run(TwoFactorAuthenticatorPoc.class, args);
     }
 
 }

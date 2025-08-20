@@ -5,6 +5,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class UserAuthResponseDto {
-    private boolean verified;
+public class GenerateSecretResponse {
+    private String secret;
+    private String otpauthUrl;
 }
