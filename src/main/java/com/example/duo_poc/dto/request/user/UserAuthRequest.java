@@ -1,13 +1,17 @@
 package com.example.duo_poc.dto.request.user;
 
+import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
-import lombok.extern.slf4j.Slf4j;
 
 
 @Getter
 @Setter
+@AllArgsConstructor
+@NoArgsConstructor
 public class UserAuthRequest {
     private String email;
+    private int roleId;
     private int otp;
 }

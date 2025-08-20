@@ -7,6 +7,8 @@ import lombok.Setter;
 
 @Getter
 @Setter
+@AllArgsConstructor
+@NoArgsConstructor
 public class UserVerificationResponseDto {
     private String email;
     private String password;

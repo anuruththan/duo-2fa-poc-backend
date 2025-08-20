@@ -71,7 +71,6 @@ AS
     END;
 ';
 
-drop FUNCTION IF EXISTS verify_user(pEmail VARCHAR);
 CREATE OR REPLACE FUNCTION verify_user(IN pEmail VARCHAR)
     RETURNS VOID
     LANGUAGE plpgsql
@@ -84,7 +83,6 @@ AS
     END;
 ';
 
-DROP FUNCTION IF EXISTS unverify_user(pEmail VARCHAR);
 CREATE OR REPLACE FUNCTION unverify_user(IN pEmail VARCHAR)
     RETURNS VOID
     LANGUAGE plpgsql
@@ -95,6 +93,21 @@ AS
         SET "IsUserVerified" = FALSE
         WHERE "E-mail" = pEmail;
     END;
+';
+
+CREATE OR REPLACE FUNCTION is_user_verified(IN pEmailID VARCHAR, OUT rIsVerified BOOLEAN)
+    LANGUAGE plpgsql
+AS
+'
+    BEGIN
+
+        SELECT "IsUserVerified"
+        into rIsVerified
+        FROM "UserDetails"
+        WHERE "E-mail" = pEmailID;
+        RETURN;
+    END;
+
 ';
 
 CREATE OR REPLACE FUNCTION insert_secret_key(IN pEmailId VARCHAR, IN pSecretKey VARCHAR)

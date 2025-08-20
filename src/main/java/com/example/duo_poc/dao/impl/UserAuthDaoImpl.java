@@ -128,6 +128,27 @@ public class UserAuthDaoImpl implements UserAuthDao {
     }
 
     @Override
+    public boolean isUserVerified(String email){
+        boolean userVerified = false;
+        try (Connection connection = DataSourceUtils.getConnection(Objects.requireNonNull(jdbcTemplate.getDataSource()));
+             CallableStatement callableStatement = connection.prepareCall(DaoConstant.IS_VERIFIED_USER)) {
+            callableStatement.setString(1,email);
+
+            ResultSet resultSet = callableStatement.executeQuery();
+
+            if (resultSet.next()) {
+                userVerified = resultSet.getBoolean(1);
+            }
+
+        }
+        catch (SQLException e){
+            log.error("Unable to get user verification: {}",e.getMessage());
+        }
+
+        return userVerified;
+    }
+
+    @Override
     public String getSecretKey(String email){
 
         String secretKey = null;

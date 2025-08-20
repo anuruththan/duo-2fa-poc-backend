@@ -15,6 +15,6 @@ public class TotpUtil {
     }
 
     public static String getOtpAuthURL(String user, String secret) {
-        return String.format("otpauth://totp/%s?secret=%s", user, secret);
+        return String.format("otpauth://totp/%s?secret=%s&issuer=%s","Smartzi" , secret, user);
     }
 }

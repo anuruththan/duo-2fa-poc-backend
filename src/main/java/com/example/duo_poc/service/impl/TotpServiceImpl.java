@@ -5,9 +5,11 @@ import com.example.duo_poc.dto.response.user.UserAuthResponseDto;
 import com.example.duo_poc.service.TotpService;
 import com.example.duo_poc.util.TotpUtil;
 import com.example.duo_poc.dao.UserAuthDao;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+@Slf4j
 @Service
 public class TotpServiceImpl implements TotpService {
 
@@ -15,17 +17,26 @@ public class TotpServiceImpl implements TotpService {
     private UserAuthDao userDao;
 
     public GenerateSecretResponse generateSecretForUser(String email) {
-        String existing = userDao.getSecretKey(email);
-        String secret;
-        if (existing == null) {
-            secret = TotpUtil.generateSecret().getKey();
-            userDao.insertSecretKey(email, secret);
-        } else {
-            secret = existing;
-        }
+
+        boolean isUserVerified = false;
         GenerateSecretResponse resp = new GenerateSecretResponse();
-        resp.setSecret(secret);
-        resp.setOtpauthUrl(TotpUtil.getOtpAuthURL(email, secret));
+        String secret;
+
+        isUserVerified = userDao.isUserVerified(email);
+        String existing = userDao.getSecretKey(email);
+
+        if (isUserVerified) {
+            if (existing == null) {
+                secret = TotpUtil.generateSecret().getKey();
+                userDao.insertSecretKey(email, secret);
+            } else {
+                secret = existing;
+            }
+
+            resp.setSecret(secret);
+            resp.setOtpauthUrl(TotpUtil.getOtpAuthURL(email, secret));
+
+        }
         return resp;
     }
 

@@ -17,6 +17,8 @@ public interface UserAuthDao {
 
     public void unverifyUser(String email);
 
+    public boolean isUserVerified(String email);
+
     public String getSecretKey(String email);
 
     public void insertSecretKey(String email, String secretKey);

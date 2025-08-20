@@ -5,10 +5,13 @@ import com.example.duo_poc.dto.request.user.PasswordChangeDto;
 import com.example.duo_poc.dto.request.user.UserAuthRequest;
 import com.example.duo_poc.dto.request.user.UserVerificationRequestDto;
 import com.example.duo_poc.dto.response.GeneralResponse;
+import com.example.duo_poc.dto.response.user.AuthResponseDto;
+import com.example.duo_poc.dto.response.user.UserAuthResponseDto;
 import com.example.duo_poc.dto.response.user.UserVerificationResponseDto;
 import com.example.duo_poc.dao.UserAuthDao;
 import com.example.duo_poc.service.TotpService;
 import com.example.duo_poc.service.UserAuthService;
+import com.example.duo_poc.util.JwtUtil;
 import com.example.duo_poc.util.PasswordUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +20,9 @@ import org.springframework.stereotype.Service;
 @Slf4j
 @Service
 public class UserAuthServiceImpl implements UserAuthService {
+
+    @Autowired
+    private JwtUtil jwtUtil;
 
     @Autowired
     private UserAuthDao userAuthDao;
@@ -75,7 +81,41 @@ public class UserAuthServiceImpl implements UserAuthService {
     @Override
     public GeneralResponse authenticateUser(UserAuthRequest userAuthRequest){
         GeneralResponse generalResponse = new GeneralResponse();
-        generalResponse.setData(totpService.verifyUser(userAuthRequest.getEmail(),userAuthRequest.getOtp()));
+        boolean isAuthenticated = userAuthDao.isUserVerified(userAuthRequest.getEmail());
+        UserAuthResponseDto isUserverified = new UserAuthResponseDto();
+
+        if (isAuthenticated) {
+            isUserverified = totpService.verifyUser(userAuthRequest.getEmail(),userAuthRequest.getOtp());
+
+            if(isUserverified.isVerified()) {
+
+                userAuthDao.unverifyUser(userAuthRequest.getEmail());
+
+                AuthResponseDto authResponseDto = new AuthResponseDto();
+
+                String token = jwtUtil.generateToken(userAuthRequest.getEmail(),userAuthRequest.getRoleId());
+
+                authResponseDto.setToken(token);
+                authResponseDto.setRoleId(userAuthRequest.getRoleId());
+                authResponseDto.setEmail(userAuthRequest.getEmail());
+
+                generalResponse.setData(authResponseDto);
+                generalResponse.setMsg("Authenticated");
+                generalResponse.setStatusCode(200);
+            }
+
+            else  {
+                generalResponse.setData(null);
+                generalResponse.setMsg("Invalid OTP");
+                generalResponse.setStatusCode(403);
+            }
+        }
+        else {
+            generalResponse.setData(null);
+            generalResponse.setMsg("User is not verified");
+            generalResponse.setRes(false);
+            generalResponse.setStatusCode(401);
+        }
         return  generalResponse;
     }
 
