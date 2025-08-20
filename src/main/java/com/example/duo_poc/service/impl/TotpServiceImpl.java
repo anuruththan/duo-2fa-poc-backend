@@ -23,16 +23,18 @@ public class TotpServiceImpl implements TotpService {
         String secret;
 
         isUserVerified = userDao.isUserVerified(email);
-        String existing = userDao.getSecretKey(email);
 
+
+//        String existing = userDao.getSecretKey(email);
         if (isUserVerified) {
-            if (existing == null) {
-                secret = TotpUtil.generateSecret().getKey();
-                userDao.insertSecretKey(email, secret);
-            } else {
-                secret = existing;
-            }
-
+//            if (existing == null) {
+//                secret = TotpUtil.generateSecret().getKey();
+//                userDao.insertSecretKey(email, secret);
+//            } else {
+//                secret = existing;
+//            }
+            secret = TotpUtil.generateSecret().getKey();
+            userDao.insertSecretKey(email, secret);
             resp.setSecret(secret);
             resp.setOtpauthUrl(TotpUtil.getOtpAuthURL(email, secret));
 
